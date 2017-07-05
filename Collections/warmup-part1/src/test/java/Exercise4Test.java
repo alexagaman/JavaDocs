@@ -121,5 +121,6 @@ public class Exercise4Test {
                 return o1.length() - o2.length();
             }
         });
+        System.out.println(testingStringValues.toString());
     }
 }
