@@ -7,10 +7,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 import static junit.framework.Assert.assertEquals;
 
 @Ignore
@@ -21,6 +23,8 @@ public class OccurrencesTest {
         String word = "cool";
         //TODO #C9
         Map<String, Long> occ = new HashMap<>();
+        Stream<String> lst = Arrays.stream(word.split(""));
+        occ = lst.collect(groupingBy(x->x,counting()));
 
         assertEquals(2, (long) occ.get("o"));
         assertEquals(1, (long) occ.get("c"));
@@ -35,7 +39,8 @@ public class OccurrencesTest {
 
         //TODO #C9
         Map<String, Long> occ = new HashMap<>();
-
+        Stream<String> lst = sentences.stream().flatMap(x->Arrays.stream(x.split("")));
+        occ = lst.collect(groupingBy(x->x,counting()));
 
         assertEquals(2, (long) occ.get("l"));
         assertEquals(4, (long) occ.get(" "));
