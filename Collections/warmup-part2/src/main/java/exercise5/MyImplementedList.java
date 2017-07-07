@@ -1,6 +1,5 @@
-package exercise.exercise4;
+package exercise5;
 
-import exercise.exercise2.MyList;
 
 import java.util.Comparator;
 import java.util.Iterator;
