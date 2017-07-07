@@ -57,7 +57,7 @@ public class MyResizableHashMap<K, V> {
         //  function that does the rehashing of the HashMap
         Set<MyEntry> entries = entrySet();
         capacity *= INCREASE_SIZE_FACTOR;
-        size = 0;
+        clear();
         buckets = new Node[capacity];
         for(MyEntry ent : entries){
             put((K)ent.getKey(),(V)ent.getValue());
@@ -259,7 +259,7 @@ public class MyResizableHashMap<K, V> {
             if (buckets[i] != null) {
                 while (buckets[i].getNextElement() != null) {
                     Node<K, V> node = buckets[i];
-                    while (node.getNextElement() != null) {
+                    while (node.getNextElement().getNextElement() != null) {
                         node = node.getNextElement();
                     }
                     node.setNextElement(null);
