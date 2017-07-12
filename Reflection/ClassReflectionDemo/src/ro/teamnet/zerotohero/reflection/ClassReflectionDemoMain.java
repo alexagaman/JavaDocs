@@ -9,8 +9,8 @@ package ro.teamnet.zerotohero.reflection;
 public class ClassReflectionDemoMain {
     public static void main(String[] args) {
         //TODO get the class for a String object, and print it
-		
-
+        String s = new String("asda");
+        System.out.println(s.getClass());
         //TODO get the class of an Enum, and print it
         
 
