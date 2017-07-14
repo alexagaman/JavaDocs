@@ -2,6 +2,8 @@ package ro.teamnet.zth.api.em;
 
 import ro.teamnet.zth.api.annotations.Id;
 import ro.teamnet.zth.api.database.DBManager;
+import ro.teamnet.zth.appl.domain.Department;
+import ro.teamnet.zth.appl.domain.Employee;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -47,7 +49,31 @@ public class EntityManagerImpl implements  EntityManager {
         } catch (SQLException | IllegalAccessException | InstantiationException | NoSuchFieldException e) {
             e.printStackTrace();
         }
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return list;
+    }
+
+    private <T> void insertHelper(T entity,Long id, String tableName, Connection connection) throws SQLException {
+        List<ColumnInfo> columns = EntityUtils.getColumns(entity.getClass());
+        for(ColumnInfo ci : columns){
+            if(ci.isId()){
+                id = id;
+                ci.setValue(id);
+            }
+            else{
+                setValueToColumn(ci, entity);
+            }
+        }
+        QueryBuilder queryBuilder = createQueryBuilder(tableName, columns, null, QueryType.INSERT);
+        try(Statement statement = connection.createStatement()){
+            statement.execute(queryBuilder.createQuery());
+        } catch (SQLException e) {
+            throw  new SQLException();
+        }
     }
     @Override
     public <T> T findById(Class<T> entityClass, Long id) {
@@ -96,6 +122,11 @@ public class EntityManagerImpl implements  EntityManager {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
@@ -103,21 +134,21 @@ public class EntityManagerImpl implements  EntityManager {
     public <T> Object insert(T entity) {
         Connection connection = null;
         connection = DBManager.getConnection(connection);
-        Long id = null;
         String tableName = EntityUtils.getTableName(entity.getClass());
-        List<ColumnInfo> columns = EntityUtils.getColumns(entity.getClass());
-        for(ColumnInfo ci : columns){
-            if(ci.isId()){
-                id = getNextIdVal(tableName,ci.getDbColumnName());
-                ci.setValue(id);
-            }
-            else{
-                setValueToColumn(ci, entity);
-            }
+        List<Field> fields = EntityUtils.getFieldsByAnnotations(entity.getClass(), Id.class);
+        Long id = getNextIdVal(tableName,fields.get(0).getAnnotation(Id.class).name());
+        try {
+            insertHelper(entity, id, tableName, connection);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        QueryBuilder queryBuilder = createQueryBuilder(tableName, columns, null, QueryType.INSERT);
-        try(Statement statement = connection.createStatement()){
-            statement.execute(queryBuilder.createQuery());
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            connection.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -174,6 +205,11 @@ public class EntityManagerImpl implements  EntityManager {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return (T) findById(entity.getClass(), id );
     }
 
@@ -200,9 +236,13 @@ public class EntityManagerImpl implements  EntityManager {
             }
         }
         QueryBuilder queryBuilder = createQueryBuilder(tableName, columns, condition, QueryType.DELETE);
-        System.out.println(queryBuilder.createQuery());
         try(Statement statement = connection.createStatement()){
             statement.execute(queryBuilder.createQuery());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            connection.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -210,8 +250,6 @@ public class EntityManagerImpl implements  EntityManager {
 
     @Override
     public <T> List<T> findByParams(Class<T> entityClass, Map<String, Object> params) {
-        Connection connection;
-        connection = DBManager.getConnection(null);
         String tableName = EntityUtils.getTableName(entityClass);
         List<ColumnInfo> columns = EntityUtils.getColumns(entityClass);
         List<Condition> conditions = new ArrayList<Condition>();
@@ -225,8 +263,51 @@ public class EntityManagerImpl implements  EntityManager {
         for (Condition condition : conditions) {
             queryBuilder.addCondition(condition);
         }
-        System.out.println(queryBuilder.createQuery());
         List<T> list = getResults(queryBuilder.createQuery(), columns, entityClass);
         return list;
+    }
+
+    public List<Employee> findEmployeesFromDep(String departmentName){
+        StringBuilder sb = new StringBuilder("select ");
+        for(ColumnInfo ci : EntityUtils.getColumns(Employee.class)){
+            sb.append(ci.getDbColumnName() + ", ");
+        }
+        sb.delete(sb.length()-2, sb.length());
+        sb.append(" from employees natural join departments ");
+        sb.append("where lower(department_name) like '%");
+        sb.append(departmentName.toLowerCase());
+        sb.append("%'");
+        List<Employee> list = getResults(sb.toString(), EntityUtils.getColumns(Employee.class), Employee.class);
+        return  list;
+    }
+
+    public <T> boolean transactionInsert(List<T> entities){
+        if(entities.isEmpty())
+            return true;
+        Connection connection = null;
+        connection = DBManager.getConnection(connection);
+        try {
+            connection.setAutoCommit(false);
+            String tableName = EntityUtils.getTableName(entities.get(0).getClass());
+            List<Field> fields = EntityUtils.getFieldsByAnnotations(entities.get(0).getClass(), Id.class);
+            for (int i=0; i < entities.size(); i++) {
+                T entity = entities.get(i);
+                fields.get(0).setAccessible(true);
+                Long id = (Long) fields.get(0).get(entity);
+                insertHelper(entity, id, tableName, connection);
+            }
+            connection.commit();
+
+        } catch (SQLException | IllegalAccessException e) {
+            try {
+                connection.rollback();
+                connection.close();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+            System.out.println("the transaction couldn't be completed");
+            return false;
+        }
+        return true;
     }
 }

@@ -1,16 +1,14 @@
 package ro.teamnet.zth.api.em;
 
 import org.junit.Test;
-import ro.teamnet.zth.api.annotations.Column;
 import ro.teamnet.zth.appl.domain.Department;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Created by Alexandra.Gaman on 7/13/2017.
@@ -41,7 +39,7 @@ public class EntityManagerImplTest{
         instance = (Department) manager.insert(instance);
         assertEquals(instance.getDepartmentName(),"ZeroToHero");
         assertTrue(instance.getLocation().equals(1400L));
-        assertTrue(instance.getId().equals(276L));
+        assertTrue(instance.getId().equals(280L));
     }
     @Test
     public void testFindAll() {
@@ -66,11 +64,9 @@ public class EntityManagerImplTest{
     public void testDelete() {
         EntityManagerImpl manager = new EntityManagerImpl();
         Department instance = new Department();
-        instance.setId(277L);
-        instance.setDepartmentName("ZeroToHero");
-        instance.setLocation(1700L);
+        instance.setId(282L);
         manager.delete(instance);
-        assertEquals(manager.findAll(Department.class).size(), 34);
+        assertEquals(manager.findAll(Department.class).size(), 36);
     }
 
     @Test
@@ -85,4 +81,30 @@ public class EntityManagerImplTest{
         departments = manager.findByParams(Department.class,params);
         assertEquals(departments.size(), 2);
     }
+
+    @Test
+    public void testFindEmployeesFromDep(){
+        EntityManagerImpl manager = new EntityManagerImpl();
+        assertEquals(manager.findEmployeesFromDep("A").size(), 53);
+    }
+
+    @Test
+    public void testTransactionInsert(){
+        List<Department> list = new ArrayList<Department>();
+        Department instance = new Department();
+        instance.setId(255L);
+        instance.setDepartmentName("transaction");
+        instance.setLocation(1400L);
+        list.add(instance);
+        instance = new Department();
+        instance.setId(257L);
+        instance.setDepartmentName("transaction");
+        instance.setLocation(1400L);
+        list.add(instance);
+        EntityManagerImpl manager = new EntityManagerImpl();
+        assertTrue(manager.transactionInsert(list));
+        assertFalse(manager.transactionInsert(list));
+
+    }
+
 }
